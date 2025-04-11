@@ -5,9 +5,10 @@ import numpy as np
 from sklearn.metrics import accuracy_score,precision_score,recall_score,roc_auc_score
 import pickle
 import json
-from dvclive import live 
+from dvclive import Live 
 from sklearn.ensemble import RandomForestClassifier
 from datetime import datetime
+import yaml
 
 # Ensure that a directory named 'logs' exist in our root folder (if not it creates one)(for storing log file)
 log_dir = 'logs'
@@ -40,6 +41,23 @@ logger.info("\n" + " "*52 + "="*60)
 logger.info(f"NEW RUN STARTED AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 logger.info("="*60 + "\n")
 
+# Function to Load Parameters from params.yaml
+def load_params(param_path:str) ->dict:
+    try:
+        logger.debug("Loading Params From: %s",param_path)
+        with open(param_path,'r') as file:
+            params = yaml.safe_load(file)
+        logger.info("Params Loaded Successfully From: %s",param_path)
+        return params
+    except FileNotFoundError:
+        logger.debug('File not found: %s',param_path)
+        raise
+    except yaml.YAMLError as e:
+        logger.debug('Yaml error: %s',e)
+        raise
+    except Exception as e:
+        logger.debug('Unexpected error occured while loadind parameters: %s',e)
+        raise
 
 # Function for Loadind Trained Model
 def load_model(file_path: str) ->RandomForestClassifier:
@@ -128,11 +146,14 @@ def save_metrics(metrics:dict,file_path:str):
 
 def main():
     try:
+         # Loading Parameters From params.yaml
+        params = load_params('params.yaml')
+
         # Loading Trained Model
-        clf = load_model(r"D:\Programming\MLOPS ROOT\MLOPs-End-To-Pipeline\models\model.pkl")
+        clf = load_model("models\model.pkl")
         
         # Loading Test Data
-        test_data = load_data(r"D:\Programming\MLOPS ROOT\MLOPs-End-To-Pipeline\data\Processed\test_tfidf.csv")
+        test_data = load_data(r"data\Processed\test_tfidf.csv")
 
         # Extract Input(independent) features and targer(dependent) feature from data
         x_test = test_data.iloc[:,:-1]
@@ -140,6 +161,14 @@ def main():
 
         # Calculating Eavluation Metrics
         metrics_dict = evaluate_model(clf,x_test,y_test)
+        
+        # Live Logging Experimentation parameters and metrics
+        logger.debug('Logging Experimentation...')
+        with Live(save_dvc_exp=True) as live:
+            live.log_params(params)
+            for metric,value in metrics_dict.items():
+                live.log_metric(metric,value)
+        logger.info('Experiment Logged Successfully.')
 
         # Saving evaluation metrics as json file
         save_metrics(metrics_dict,"reports/metrics.json")

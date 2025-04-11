@@ -1,0 +1,14 @@
+pandas
+numpy 
+matplotlib
+seaborn
+nltk
+wordcloud
+scikit-learn
+jupyter
+ipykernel
+xgboost
+dvc
+dvclive
+pickle
+json

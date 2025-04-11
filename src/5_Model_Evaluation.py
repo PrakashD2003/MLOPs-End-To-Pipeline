@@ -1,0 +1,143 @@
+import os
+import logging
+import pandas as pd
+import numpy as np
+from sklearn.metrics import accuracy_score,precision_score,recall_score,roc_auc_score
+import pickle
+import json
+from dvclive import live 
+from sklearn.ensemble import RandomForestClassifier
+
+# Ensure that a directory named 'logs' exist in our root folder (if not it creates one)(for storing log file)
+log_dir = 'logs'
+os.makedirs(log_dir,exist_ok=True)
+
+# Logging Configuration
+logger = logging.getLogger('Model_Evaluation')
+logger.setLevel('DEBUG')
+
+# Creating Handlers
+console_handler = logging.StreamHandler()
+file_log_path = os.path.join(log_dir,'Model_Evaluation.log')
+file_handler = logging.FileHandler(file_log_path,encoding='utf-8')
+
+# Setting Log Levels for Handlers
+console_handler.setLevel('DEBUG')
+file_handler.setLevel('DEBUG')
+
+# Creating a Formatter and attaching it to handelers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# Adding handlers to the logger
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+# Function for Loadind Trained Model
+def load_model(file_path: str) ->RandomForestClassifier:
+    """Load a Trained Model From Specified Path"""
+    try:
+        logger.debug("Loading Model From: %s",file_path)
+        with open(file_path,'rb') as file:
+            model = pickle.load(file)
+        logger.info("Model Loaded Succesfully.")
+        return model
+    except FileNotFoundError:
+        logger.debug("File not Found: %s",file_path)
+        raise
+    except Exception as e:
+        logger.debug("Unexpected Error Occured while Loading the Model: %s",e)
+        raise
+
+# Function for loading the Dataset
+def load_data(file_path: str) -> pd.DataFrame:
+    """Load data from a CSV file."""
+    try:
+        logger.debug("Loading Test Data from: %s",file_path)
+        df = pd.read_csv(file_path)
+        df.fillna('',inplace=True)
+       
+        logger.info("Data successfully loaded and NaN filled from %s", file_path)
+        return df
+    except pd.errors.ParserError as e:
+        logger.error("Failed to parse the CSV file: %s", e)
+        raise
+    except FileNotFoundError as e:
+        logger.error('File not found: %s', e)
+        raise
+    except Exception as e:
+        logger.error("Unexpected error occeured while loading the data: %s", e)
+        raise
+
+# Function to Evaluate the Model
+def evaluate_model(clf:RandomForestClassifier,X_test:np.array,Y_test:np.array) ->dict:
+    """Evaluate the Model and Returns Evaluation Metrics"""
+    try:
+        logger.debug("Predicting test data")
+        y_test_pred = clf.predict(X_test)
+        y_test_proba = clf.predict_proba(X_test)[:,1]
+        logger.info("Test Data Predicted Successfully")
+        
+        logger.debug("Calculating Evalutaion Metics")
+        accuracy = accuracy_score(Y_test,y_test_pred)
+        precision = precision_score(Y_test,y_test_pred)
+        recall = recall_score(Y_test,y_test_pred)
+        auc = roc_auc_score(Y_test,y_test_proba)
+
+        metrics_dict = {
+            'accuracy':accuracy,
+            'precision':precision,
+            'recall':recall,
+            'auc':auc
+        }
+        logger.info('Evaluation Metrics Calculated Successfully')
+        return metrics_dict
+    except Exception as e:
+        logger.debug("Unexpected error occured during model evaluation: %s",e)
+        raise
+# Function to Save the Evaluation Metrics as Json File
+def save_metrics(metrics:dict,file_path:str):
+    """Saves the Evaluation Metrics to a JSON file"""
+    try:
+        # Ensure the directory exists before saving the model
+        logger.debug("Creating directory for saving Evaluation Metrics...")
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)  # Creates directories if they don't exist
+        logger.info("Successfully Created Directory at: %s", file_path)
+
+        logger.debug('Saving Evaluation Metrics...')
+        with open(file_path,'w') as file:
+            json.dump(metrics,file,indent=4)
+            logger.info('Evaluation Metrics successfully saved to %s', file_path)
+
+    except FileNotFoundError as e:
+        # Handles errors in case the specified file path does not exist
+        logger.error('File path not found: %s', e)
+        raise
+    except Exception as e:
+        # Handles any other unexpected errors that might occur
+        logger.error('Unexpected error occurred while saving the evaluation metrics: %s', e)
+        raise
+
+def main():
+    try:
+        # Loading Trained Model
+        clf = load_model(r"D:\Programming\MLOPS ROOT\MLOPs-End-To-Pipeline\models\model.pkl")
+        
+        # Loading Test Data
+        test_data = load_data(r"D:\Programming\MLOPS ROOT\MLOPs-End-To-Pipeline\data\Processed\test_tfidf.csv")
+
+        # Extract Input(independent) features and targer(dependent) feature from data
+        x_test = test_data.iloc[:,:-1]
+        y_test = test_data.iloc[:,-1]
+
+        # Calculating Eavluation Metrics
+        metrics_dict = evaluate_model(clf,x_test,y_test)
+
+        # Saving evaluation metrics as json file
+        save_metrics(metrics_dict,"reports/metrics.json")
+    except Exception as e:
+        logger.debug("Failed to complete the model evaluation: %s",e)
+
+if __name__ == "__main__":
+    main()

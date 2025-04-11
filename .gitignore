@@ -1,3 +1,14 @@
+data
+models
+reports
+MLOPs_Pipeline_ENV/
+Experiments/spam.csv
+# Ignore virtual environments
+.venv/
+venv/
+env/
+ENV/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

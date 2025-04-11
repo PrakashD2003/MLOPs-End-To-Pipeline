@@ -6,6 +6,8 @@ from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import string
 import nltk
+from datetime import datetime
+
 nltk.download('stopwords')
 nltk.download('punkt')  # Also required for word_tokenize
 
@@ -35,6 +37,11 @@ file_handler.setFormatter(formatter)
 # Adding handlers to the logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+
+
+logger.info("\n" + " "*50 + "="*60)
+logger.info(f"NEW RUN STARTED AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+logger.info("="*60 + "\n")
 
 # Function for loading the Dataset
 def load_data(file_path: str) -> pd.DataFrame:

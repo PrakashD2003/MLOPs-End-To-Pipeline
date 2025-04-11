@@ -5,6 +5,7 @@ import pickle
 import logging
 from sklearn.ensemble import RandomForestClassifier
 import yaml
+from datetime import datetime
 
 # Ensure that a directory named 'logs' exist in our root folder (if not it creates one)(for storing log file)
 log_dir = 'logs'
@@ -31,6 +32,29 @@ file_handler.setFormatter(formatter)
 # Adding handlers to the logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+
+
+logger.info("\n" + " "*50 + "="*60)
+logger.info(f"NEW RUN STARTED AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+logger.info("="*60 + "\n")
+
+# Function to Load Parameters from params.yaml
+def load_params(param_path:str) ->dict:
+    try:
+        logger.debug("Loading Params From: %s",param_path)
+        with open(param_path,'r') as file:
+            params = yaml.safe_load(file)
+        logger.info("Params Loaded Successfully From: %s",param_path)
+        return params
+    except FileNotFoundError:
+        logger.debug('File not found: %s',param_path)
+        raise
+    except yaml.YAMLError as e:
+        logger.debug('Yaml error: %s',e)
+        raise
+    except Exception as e:
+        logger.debug('Unexpected error occured while loadind parameters: %s',e)
+        raise
 
 # Function for loading the Dataset
 def load_data(file_path: str) -> pd.DataFrame:
@@ -114,7 +138,8 @@ def save_model(model, file_path: str) -> None:
 # Main function to load data, train the model, and save it
 def main():
     try:
-        params = {'n_estimators':25,'random_state':2}
+        # Loading Parameters From params.yaml
+        params = load_params('params.yaml')['4_Model_Training']
         
         # Load preprocessed training data (TF-IDF transformed)
         train_data = load_data('./data/processed/train_tfidf.csv')

@@ -7,6 +7,7 @@ import pickle
 import json
 from dvclive import live 
 from sklearn.ensemble import RandomForestClassifier
+from datetime import datetime
 
 # Ensure that a directory named 'logs' exist in our root folder (if not it creates one)(for storing log file)
 log_dir = 'logs'
@@ -33,6 +34,12 @@ file_handler.setFormatter(formatter)
 # Adding handlers to the logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+
+
+logger.info("\n" + " "*52 + "="*60)
+logger.info(f"NEW RUN STARTED AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+logger.info("="*60 + "\n")
+
 
 # Function for Loadind Trained Model
 def load_model(file_path: str) ->RandomForestClassifier:

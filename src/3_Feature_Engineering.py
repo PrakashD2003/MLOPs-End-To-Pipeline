@@ -3,6 +3,7 @@ import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 import logging
 import yaml
+from datetime import datetime
 
 # Ensure that a directory named 'logs' exist in our root folder (if not it creates one)(for storing log file)
 log_dir = 'logs'
@@ -29,6 +30,30 @@ file_handler.setFormatter(formatter)
 # Adding handlers to the logger
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
+
+
+logger.info("\n" + " "*55 + "="*60)
+logger.info(f"NEW RUN STARTED AT {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+logger.info("="*60 + "\n")
+
+
+# Function to Load Parameters from params.yaml
+def load_params(param_path:str) ->dict:
+    try:
+        logger.debug("Loading Params From: %s",param_path)
+        with open(param_path,'r') as file:
+            params = yaml.safe_load(file)
+        logger.info("Params Loaded Successfully From: %s",param_path)
+        return params
+    except FileNotFoundError:
+        logger.debug('File not found: %s',param_path)
+        raise
+    except yaml.YAMLError as e:
+        logger.debug('Yaml error: %s',e)
+        raise
+    except Exception as e:
+        logger.debug('Unexpected error occured while loadind parameters: %s',e)
+        raise
 
 # Function for loading the Dataset
 def load_data(file_path: str) -> pd.DataFrame:
@@ -124,7 +149,10 @@ def save_data(train_data_df: pd.DataFrame,test_data_df: pd.DataFrame,file_path: 
 
 def main():
     try:
-        max_features = 50
+        # Loading Parameters From params.yaml
+        params = load_params('params.yaml')
+
+        max_features = params['3_Feature_Engineering']['max_features']
         
         logger.debug("Attempting to load training data from: %s", './data/interim/train_processed.csv')
         train_data = load_data('./data/interim/train_processed.csv')
